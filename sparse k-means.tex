@@ -1,0 +1,63 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algpseudocode}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+
+\newcommand{\pr}{\text{Pr}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\vbl}{\text{vbl}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\Not}{\overline}
+\newcommand{\Reals}{\mathbb{R}}
+
+\begin{document}
+For comparison, this is the normal k-means algorithm. Given $N$ observations $X \in \Reals^{D\times N}$,
+\begin{gather*}
+\argmin_{U,V} \sum_{j=1}^N \|U_{\cdot,V_j} - X_{\cdot,j}\|_2^2
+\end{gather*}
+where $U\in\Reals^{D\times K}$ contains the $K$ cluster locations, and $V \in [1,K]^N$ is the cluster assignment for each data point. 
+
+And the basic idea of the sparse algorithm. For each column $j$ in $X$, $I_j \subseteq [1,D]$ is the set of rows for which data exists,
+\begin{gather*}
+\argmin_{U,V} \sum_{j=1}^N \|U_{I_j,V_j} - X_{I_j,j}\|_*
+\end{gather*}
+$\|\cdot\|_*$ can be any norm we want. Notice how the norm is evaluated in $|I_j|$-dimensional space, instead of $D$-dimensional space.
+
+This is calculated in the same way as the regular k-means; alternate between assigning observations to the closest cluster based on the norm, and calculating the \lq\lq canonical element\rq\rq in the cluster. Note also that the clusters are all $D$ dimensional, even if the observations are not. Here is the code I've been using:
+\begin{lstlisting}
+def k_means(K, data, test):
+    M, N = data.shape
+    def get_assignments(centroids):
+        assignments = np.zeros(M, dtype=np.int32)
+        for user in range(M):
+            dists = np.linalg.norm((data[user] - centroids)
+                        * np.sign(data[user]), axis=1)
+            assignments[user] = np.argmin(dists)
+        return assignments
+    def get_centroids(assignments):
+        centroids = np.zeros((K, N))
+        counts = np.zeros((K, N))
+        for k in range(K):
+            centroids[k] = np.sum(data[assignments == k], axis=0)
+            counts[k] = np.sum(np.sign(data[assignments == k]), axis=0)
+        counts[counts == 0] = 1
+        return centroids / counts
+    def rmse(guess):
+        diffs = (test - guess) * np.sign(test)
+        return np.sqrt(np.nansum(np.square(diffs)) / np.sum(np.sign(test)))
+    
+    centroids = np.random.rand(K, N) * 6 + 0.5
+    for _ in range(6):
+        assignments = get_assignments(centroids)
+        centroids = get_centroids(assignments)
+        print(rmse(centroids[assignments]))
+    return centroids, assignments
+\end{lstlisting}
+It expects a 0.0 for missing data (so \texttt{np.sign} returns 1 for present data and 0 for missing data). It would probably be much faster if it acually used a sparse representation, and also if it didn't have the loop in \texttt{get\_assinments}.
+
+Also, we can try mixing and matching alternatives to the mean (ie median, mode, ...?) and alternatives to the euclidean norm for measuring distance (ie $L_1$, or non-parametric statistics like Cohen's Kappa), or some hybrid approach where we do one for a few iterations, and then switch. In theory the norm determines the type of mean (so euclidean mean minimizes 2-norm, median (i think) minimizes 1-norm), but it will probably work ok if they're mismatched.
+
+Once we pick a method that seems to work, we could compare its accuracy (about as good) and its performance (way faster) to methods like SVD. It's also asymptotically faster than SVD, since SVD is $O(mn^2)$, and this (if we implement it right) is linear in the number of nonzero elements.
+\end{document}

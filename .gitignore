@@ -1,0 +1,6 @@
+build
+data_train.*
+*.so
+*.html
+.DS_Store
+.ipynb_checkpoints
