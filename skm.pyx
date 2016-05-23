@@ -51,7 +51,7 @@ cdef get_centroids(int K, data, int[::1] assignments):
     counts[counts == 0] = 1
     return centroids / counts
 
-cdef rmse(test, double[:,::1] guess):
+cdef rmse(test, double[:,::1] centroids, int[::1] assignments):
     cdef:
         int M = test.shape[0]
         double err = 0.0
@@ -79,7 +79,7 @@ def k_means(data, test, K=20, tol=0.01):
     while True:
         assignments = get_assignments(data, centroids)
         centroids = get_centroids(K, data, assignments)
-        newerr = rmse(test, centroids[assignments])
+        newerr = rmse(test, centroids, assignments)
         if (err - newerr) / err < tol:
             break
         err = newerr
