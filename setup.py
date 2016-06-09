@@ -5,4 +5,7 @@ import numpy as np
 setup(
     ext_modules = cythonize("skm.pyx"),
     include_dirs = [np.get_include()],
+    install_requires = [
+          'Cython',
+    ],
 )

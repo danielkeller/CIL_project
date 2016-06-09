@@ -61,7 +61,7 @@ cdef rmse(test, double[:,::1] centroids, int[::1] assignments):
         double[::1] test_data = test.data
     for user in range(M):
         for ptr in range(test_ptr[user], test_ptr[user+1]):
-            err += square(test_data[ptr] - guess[user, test_ind[ptr]])
+            err += square(test_data[ptr] - centroids[assignments[user], test_ind[ptr]])
     return np.sqrt(err / test.nnz)
 
 def k_means(data, test, K=20, tol=0.01):
