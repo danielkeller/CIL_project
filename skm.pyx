@@ -3,6 +3,8 @@
 #cython: cdivision=True
 #cython: nonecheck=False
 
+#This file is the actual K-means algorithm
+
 import numpy as np
 cimport numpy as np
 import scipy.sparse as sp
@@ -24,9 +26,12 @@ cdef get_assignments(data, double[:,::1] centroids):
         int user, ptr, cluster
         double diff, dist, closest_d
     for user in range(M):
+        #Find closest cluster
         closest_d = INFINITY
         for cluster in range(K):
             dist = 0
+            #Only look at films which exist in 'data'. The dimension is the same,
+            #so we don't need to account for it
             for ptr in range(data_ptr[user], data_ptr[user+1]):
                 dist += square(centroids[cluster, data_ind[ptr]] - data_data[ptr])
             if dist < closest_d:
@@ -38,6 +43,7 @@ cdef get_centroids(int K, data, int[::1] assignments):
     cdef:
         int M = data.shape[0]
         int N = data.shape[1]
+        #Note that the centroids are dense.
         np.ndarray[np.double_t, ndim=2] centroids = np.zeros((K, N))
         np.ndarray[np.double_t, ndim=2] counts = np.zeros((K, N))
         int[::1] data_ptr = data.indptr
@@ -46,6 +52,8 @@ cdef get_centroids(int K, data, int[::1] assignments):
         int user, ptr
     for user in range(M):
         for ptr in range(data_ptr[user], data_ptr[user+1]):
+            #Index by cluster assignment and film. Counts are needed because there
+            #will generally be different numbers of obervations for each film.
             centroids[assignments[user], data_ind[ptr]] += data_data[ptr]
             counts[assignments[user], data_ind[ptr]] += 1
     counts[counts == 0] = 1
